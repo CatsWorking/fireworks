@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>City Fireworks Spectacle</title>
+    <style>
+        :root {
+            --sidebar-width: 280px;
+            --bg-color: #000000;
+            --panel-color: rgba(10, 10, 15, 0.9);
+            --text-color: #e2e8f0;
+            --accent-color: #38bdf8;
+            --input-bg: rgba(255, 255, 255, 0.08);
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* Sidebar UI */
+        #sidebar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: var(--sidebar-width);
+            background: var(--panel-color);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-color);
+            z-index: 10;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+            transition: transform 0.3s ease;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+
+        #sidebar.collapsed {
+            transform: translateX(calc(-100% - 30px));
+        }
+
+        .toggle-btn {
+            position: absolute;
+            top: 20px;
+            left: calc(100% + 10px); /* Outside sidebar */
+            background: var(--panel-color);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            color: var(--accent-color);
+            letter-spacing: 1px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+            color: #94a3b8;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            background: transparent;
+            -webkit-appearance: none;
+            margin: 8px 0;
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            background: var(--input-bg);
+            border-radius: 3px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            margin-top: -5px;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            background: var(--input-bg);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        select option {
+            background: #0f172a;
+        }
+
+        .value-display {
+            float: right;
+            font-size: 0.8rem;
+            color: white;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button.action-btn {
+            flex: 1;
+            padding: 10px;
+            background: var(--accent-color);
+            border: none;
+            border-radius: 6px;
+            color: #0f172a;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button.action-btn:hover {
+            filter: brightness(1.1);
+        }
+        
+        button.action-btn.active {
+            background: #22c55e;
+            color: white;
+        }
+
+        button.clear-btn {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+        
+        button.clear-btn:hover {
+            background: rgba(239, 68, 68, 0.25);
+        }
+
+        .color-control {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+            width: 40px;
+            height: 38px;
+            border-radius: 6px;
+            background: none;
+            cursor: pointer;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        
+        input[type="color"]::-webkit-color-swatch {
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+        }
+
+        .hint {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 20px;
+            text-align: center;
+            font-style: italic;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <h2>NIGHT SKY CONTROL</h2>
+        
+        <div class="control-group">
+            <label>Firework Color</label>
+            <div class="color-control">
+                <button id="btnColorToggle" class="action-btn active" style="font-size: 0.8rem; flex: 2;">Random: ON</button>
+                <input type="color" id="colorPicker" value="#ff0088" disabled>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Firework Type</label>
+            <select id="fireworkType">
+                <option value="classic">Classic Sphere</option>
+                <option value="ring">Saturn Ring</option>
+                <option value="willow">Weeping Willow</option>
+                <option value="double">Double Burst</option>
+                <option value="random">Randomized</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Explosion Size <span id="val-size" class="value-display">1.0x</span></label>
+            <input type="range" id="size" min="0.5" max="2.5" step="0.1" value="1.0">
+        </div>
+
+        <div class="control-group">
+            <label>Particle Count <span id="val-particles" class="value-display">150</span></label>
+            <input type="range" id="particles" min="50" max="400" step="10" value="150">
+        </div>
+
+        <div class="control-group">
+            <label>Simulation Speed <span id="val-speed" class="value-display">1.0x</span></label>
+            <input type="range" id="speed" min="0.2" max="2.0" step="0.1" value="1.0">
+        </div>
+
+        <div class="control-group">
+            <label>Wind Strength <span id="val-wind" class="value-display">0</span></label>
+            <input type="range" id="wind" min="-5" max="5" step="1" value="0">
+        </div>
+        
+        <div class="control-group">
+            <label>City Light Level <span id="val-city" class="value-display">70%</span></label>
+            <input type="range" id="cityLights" min="0" max="100" step="10" value="70">
+        </div>
+
+        <div class="btn-row">
+            <button class="action-btn" id="autoLaunch">Auto Fire: OFF</button>
+            <button class="action-btn clear-btn" id="clearSky">Clear Sky</button>
+        </div>
+
+        <div class="hint">Click anywhere in the sky to launch!</div>
+
+        <button class="toggle-btn" id="toggleSidebar">⚙️</button>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <script>
+        /**
+         * Core Application Logic
+         */
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { alpha: false }); 
+        
+        // State
+        let width, height;
+        let particles = [];
+        let rockets = [];
+        let stars = [];
+        let buildings = [];
+        let cars = [];
+        let animationId;
+        let lastTime = 0;
+        let autoLaunchInterval = null;
+        let mouseX = 0, mouseY = 0;
+
+        // Settings
+        const settings = {
+            type: 'random',
+            size: 1.0,
+            particleCount: 150,
+            simSpeed: 1.0,
+            wind: 0,
+            cityLightChance: 0.7,
+            randomColor: true,
+            customColor: '#ff0088'
+        };
+
+        // Inputs
+        const ui = {
+            type: document.getElementById('fireworkType'),
+            size: document.getElementById('size'),
+            particles: document.getElementById('particles'),
+            speed: document.getElementById('speed'),
+            wind: document.getElementById('wind'),
+            cityLights: document.getElementById('cityLights'),
+            autoLaunch: document.getElementById('autoLaunch'),
+            clearBtn: document.getElementById('clearSky'),
+            toggleBtn: document.getElementById('toggleSidebar'),
+            sidebar: document.getElementById('sidebar'),
+            btnColorToggle: document.getElementById('btnColorToggle'),
+            colorPicker: document.getElementById('colorPicker'),
+            displays: {
+                size: document.getElementById('val-size'),
+                particles: document.getElementById('val-particles'),
+                speed: document.getElementById('val-speed'),
+                wind: document.getElementById('val-wind'),
+                city: document.getElementById('val-city')
+            }
+        };
+
+        // --- Utility Functions ---
+        const random = (min, max) => Math.random() * (max - min) + min;
+        const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+        const randomColor = () => {
+            const hue = randomInt(0, 360);
+            return `hsl(${hue}, 100%, 60%)`;
+        };
+        const getSpecificColor = (baseHue, variation = 30) => {
+            const h = baseHue + random(-variation, variation);
+            return `hsl(${h}, 100%, 60%)`;
+        };
+        const hexToHsl = (hex) => {
+            // Very basic conversion or just use hex directly since canvas supports it
+            return hex;
+        }
+
+        // --- Classes ---
+
+        class Star {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = random(0, width);
+                this.y = random(0, height * 0.7); 
+                this.size = random(0.5, 2);
+                this.alpha = random(0.05, 0.5); // Dimmer stars for darker sky
+                this.twinkleSpeed = random(0.005, 0.02); // Slower twinkle
+            }
+            draw() {
+                this.alpha += this.twinkleSpeed;
+                if (this.alpha > 0.6 || this.alpha < 0.05) this.twinkleSpeed *= -1;
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+            }
+        }
+
+        class Building {
+            constructor(x, w) {
+                this.x = x;
+                this.w = w;
+                this.h = random(height * 0.05, height * 0.35); 
+                this.y = height - this.h;
+                
+                // Much darker buildings
+                this.color = `hsl(220, 15%, ${random(2, 8)}%)`; 
+                this.windows = [];
+                this.generateWindows();
+            }
+
+            generateWindows() {
+                this.windows = [];
+                const rows = Math.floor(this.h / 15);
+                const cols = Math.floor(this.w / 12);
+                
+                for(let r=0; r<rows; r++) {
+                    for(let c=0; c<cols; c++) {
+                        if(Math.random() > 0.3) { 
+                            this.windows.push({
+                                x: this.x + 4 + c * 12,
+                                y: this.y + 4 + r * 15,
+                                w: 6,
+                                h: 8,
+                                on: Math.random() < settings.cityLightChance,
+                                flickers: Math.random() > 0.98
+                            });
+                        }
+                    }
+                }
+            }
+
+            updateLights() {
+                if (Math.random() < 0.05) {
+                    const win = this.windows[randomInt(0, this.windows.length-1)];
+                    if(win) win.on = !win.on;
+                }
+                this.windows.forEach(win => {
+                     if (Math.random() > settings.cityLightChance + 0.1) win.on = false; 
+                     else if (Math.random() < settings.cityLightChance - 0.1 && !win.on) win.on = true;
+                });
+            }
+
+            draw() {
+                // Building body
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+                
+                // Remove the rim light stroke for a darker look, or make it very subtle
+                ctx.fillStyle = '#050505'; 
+                // Using fillRect for edges instead of stroke for better perf/look
+                ctx.fillRect(this.x, this.y, 1, this.h);
+                ctx.fillRect(this.x + this.w - 1, this.y, 1, this.h);
+
+                // Collect lit windows to batch draw with shadow (Bloom)
+                const litWindows = [];
+                
+                // Draw unlit windows first
+                ctx.fillStyle = 'rgba(10, 10, 15, 1)';
+                this.windows.forEach(win => {
+                    if (!win.on) {
+                        ctx.fillRect(win.x, win.y, win.w, win.h);
+                    } else {
+                        if (win.flickers && Math.random() > 0.9) return;
+                        litWindows.push(win);
+                    }
+                });
+
+                // Draw lit windows with Bloom
+                if (litWindows.length > 0) {
+                    ctx.save();
+                    ctx.shadowColor = "rgba(255, 230, 150, 0.5)";
+                    ctx.shadowBlur = 15;
+                    ctx.fillStyle = `rgba(255, 220, 100, 0.9)`;
+                    
+                    litWindows.forEach(win => {
+                        ctx.fillRect(win.x, win.y, win.w, win.h);
+                    });
+                    ctx.restore();
+                }
+            }
+        }
+
+        class Car {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.w = random(30, 50);
+                this.h = 10;
+                // SLOWER cars
+                this.speed = random(1, 2.5) * settings.simSpeed;
+                this.dir = Math.random() > 0.5 ? 1 : -1;
+                this.x = this.dir === 1 ? -100 : width + 100;
+                this.y = height - random(5, 25); 
+                this.color = randomColor();
+            }
+
+            update() {
+                this.x += this.speed * this.dir;
+                if ((this.dir === 1 && this.x > width + 200) || 
+                    (this.dir === -1 && this.x < -200)) {
+                    this.reset();
+                }
+            }
+
+            draw() {
+                // Car Body (Darker)
+                ctx.fillStyle = '#000'; 
+                ctx.fillRect(this.x, this.y + this.h, this.w, 4); 
+                
+                ctx.fillStyle = '#64748b'; 
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+                
+                // Headlights with intense Bloom
+                ctx.save();
+                ctx.shadowColor = "#fff";
+                ctx.shadowBlur = 20;
+                ctx.globalCompositeOperation = 'screen';
+                
+                const grad = ctx.createLinearGradient(this.x, this.y, this.x + (180 * this.dir), this.y);
+                grad.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+                grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                if (this.dir === 1) {
+                    // Right facing
+                    ctx.moveTo(this.x + this.w, this.y + 2);
+                    ctx.lineTo(this.x + this.w + 140, this.y - 15);
+                    ctx.lineTo(this.x + this.w + 140, this.y + 40);
+                    ctx.lineTo(this.x + this.w, this.y + 10);
+                } else {
+                    // Left facing
+                    ctx.moveTo(this.x, this.y + 2);
+                    ctx.lineTo(this.x - 140, this.y - 15);
+                    ctx.lineTo(this.x - 140, this.y + 40);
+                    ctx.lineTo(this.x, this.y + 10);
+                }
+                ctx.fill();
+                ctx.restore();
+
+                // Tail lights
+                ctx.save();
+                ctx.shadowColor = "#ef4444";
+                ctx.shadowBlur = 10;
+                ctx.fillStyle = '#ef4444';
+                if(this.dir === 1) {
+                    ctx.fillRect(this.x, this.y + 2, 2, 5);
+                } else {
+                    ctx.fillRect(this.x + this.w - 2, this.y + 2, 2, 5);
+                }
+                ctx.restore();
+            }
+        }
+
+        class Rocket {
+            constructor(tx, ty) {
+                this.x = random(width * 0.2, width * 0.8);
+                this.y = height;
+                this.tx = tx;
+                this.ty = ty;
+                
+                // Color Logic
+                if (settings.randomColor) {
+                    this.color = randomColor();
+                } else {
+                    this.color = settings.customColor;
+                }
+                
+                const distance = Math.sqrt(Math.pow(tx - this.x, 2) + Math.pow(ty - this.y, 2));
+                // SLOWER rockets
+                const speed = 7 * settings.simSpeed;
+                
+                const angle = Math.atan2(ty - this.y, tx - this.x);
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                
+                this.exploded = false;
+                this.trail = [];
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Add trail
+                this.trail.push({x: this.x, y: this.y});
+                if(this.trail.length > 15) this.trail.shift();
+
+                const dist = Math.sqrt(Math.pow(this.tx - this.x, 2) + Math.pow(this.ty - this.y, 2));
+                
+                if (dist < 15 || this.y < this.ty) {
+                    this.explode();
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 10;
+                
+                // Draw Trail
+                ctx.beginPath();
+                for(let i=0; i<this.trail.length; i++) {
+                    const point = this.trail[i];
+                    ctx.lineTo(point.x, point.y);
+                }
+                // Trail is fainter
+                ctx.strokeStyle = `rgba(255, 255, 255, 0.2)`;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Rocket head
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x - 2, this.y - 2, 4, 4);
+                ctx.restore();
+            }
+
+            explode() {
+                this.exploded = true;
+                createExplosion(this.x, this.y, this.color);
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color, typeProps) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                
+                // SLOWER explosion velocity
+                const velocity = random(1.5, 4.5) * settings.size * settings.simSpeed;
+                const angle = typeProps.angle !== undefined ? typeProps.angle : random(0, Math.PI * 2);
+                
+                const vMod = typeProps.type === 'ring' ? velocity : velocity * random(0.5, 1.2);
+
+                this.vx = Math.cos(angle) * vMod;
+                this.vy = Math.sin(angle) * vMod;
+                
+                this.alpha = 1;
+                // Slower decay for more hang time
+                this.decay = random(0.004, 0.015) * settings.simSpeed; 
+                this.gravity = 0.04 * settings.simSpeed;
+                
+                if (typeProps.type === 'willow') {
+                    this.drag = 0.93;
+                    this.decay = 0.006 * settings.simSpeed;
+                } else {
+                    this.drag = 0.96;
+                }
+                
+                this.history = [];
+            }
+
+            update() {
+                this.vx *= this.drag;
+                this.vy *= this.drag;
+                
+                this.vy += this.gravity;
+                this.vx += (settings.wind * 0.01);
+
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha -= this.decay;
+
+                this.history.push({x: this.x, y: this.y});
+                if(this.history.length > 6) this.history.shift();
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 2;
+                
+                // Bloom for particles
+                if (this.alpha > 0.5) {
+                    ctx.shadowColor = this.color;
+                    ctx.shadowBlur = 8;
+                }
+                
+                ctx.beginPath();
+                if(this.history.length > 0) {
+                    ctx.moveTo(this.history[0].x, this.history[0].y);
+                    for(let i=1; i<this.history.length; i++) {
+                        ctx.lineTo(this.history[i].x, this.history[i].y);
+                    }
+                    ctx.lineTo(this.x, this.y);
+                } else {
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(this.x + this.vx, this.y + this.vy);
+                }
+                ctx.stroke();
+                
+                ctx.fillStyle = '#fff';
+                ctx.globalAlpha = this.alpha * 0.8;
+                ctx.fillRect(this.x-1, this.y-1, 2, 2);
+                
+                ctx.restore();
+            }
+        }
+
+        // --- Logic & Control ---
+
+        function createExplosion(x, y, mainColor) {
+            let type = settings.type;
+            if(type === 'random') {
+                const types = ['classic', 'ring', 'willow', 'double'];
+                type = types[randomInt(0, types.length - 1)];
+            }
+
+            const count = settings.particleCount;
+            const angleStep = (Math.PI * 2) / count;
+
+            if (type === 'ring') {
+                for(let i=0; i<count; i++) {
+                    particles.push(new Particle(x, y, mainColor, {
+                        type: 'ring',
+                        angle: i * angleStep
+                    }));
+                }
+            } else if (type === 'double') {
+                // Determine core color based on mode
+                const coreColor = settings.randomColor ? randomColor() : '#ffffff';
+                
+                for(let i=0; i<count/2; i++) {
+                    particles.push(new Particle(x, y, coreColor, { type: 'classic' }));
+                }
+                for(let i=0; i<count; i++) {
+                    particles.push(new Particle(x, y, mainColor, { 
+                        type: 'classic',
+                        angle: random(0, Math.PI * 2) 
+                    }));
+                }
+            } else {
+                for(let i=0; i<count; i++) {
+                    particles.push(new Particle(x, y, mainColor, { type: type }));
+                }
+            }
+
+            // Flash effect (Dimmer for darker night)
+            ctx.fillStyle = 'rgba(200, 200, 255, 0.15)';
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.fillRect(0, 0, width, height);
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
+        function init() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+
+            stars = [];
+            for(let i=0; i<150; i++) stars.push(new Star()); // More stars
+
+            buildings = [];
+            let cx = 0;
+            while(cx < width) {
+                const w = random(40, 100);
+                buildings.push(new Building(cx, w));
+                cx += w;
+            }
+
+            cars = [];
+            for(let i=0; i<5; i++) cars.push(new Car());
+
+            window.addEventListener('resize', () => {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+                init();
+            });
+
+            canvas.addEventListener('mousedown', (e) => {
+                rockets.push(new Rocket(e.clientX, e.clientY));
+            });
+            
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    rockets.push(new Rocket(e.changedTouches[i].clientX, e.changedTouches[i].clientY));
+                }
+            }, {passive: false});
+
+            loop();
+        }
+
+        function loop() {
+            animationId = requestAnimationFrame(loop);
+
+            // raketas blyat
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; 
+            ctx.fillRect(0, 0, width, height);
+
+            stars.forEach(star => star.draw());
+
+            for(let i = rockets.length - 1; i >= 0; i--) {
+                rockets[i].update();
+                rockets[i].draw();
+                if(rockets[i].exploded) rockets.splice(i, 1);
+            }
+
+            for(let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                if(particles[i].alpha <= 0) particles.splice(i, 1);
+            }
+
+            // city
+            ctx.fillStyle = '#020202';
+            ctx.fillRect(0, height - height*0.25, width, height*0.25);
+
+            buildings.forEach(b => {
+                if(Math.random() < 0.01) b.updateLights();
+                b.draw();
+            });
+
+            // road shi
+            ctx.fillStyle = '#0f0f12';
+            ctx.fillRect(0, height - 25, width, 25);
+            
+            // Cars [step out of the vee hickle]
+            cars.forEach(car => {
+                car.update();
+                car.draw();
+            });
+        }
+
+        // ui logika
+        ui.type.addEventListener('change', (e) => settings.type = e.target.value);
+        
+        ui.size.addEventListener('input', (e) => {
+            settings.size = parseFloat(e.target.value);
+            ui.displays.size.textContent = settings.size.toFixed(1) + 'x';
+        });
+
+        ui.particles.addEventListener('input', (e) => {
+            settings.particleCount = parseInt(e.target.value);
+            ui.displays.particles.textContent = settings.particleCount;
+        });
+
+        ui.speed.addEventListener('input', (e) => {
+            settings.simSpeed = parseFloat(e.target.value);
+            ui.displays.speed.textContent = settings.simSpeed.toFixed(1) + 'x';
+        });
+
+        ui.wind.addEventListener('input', (e) => {
+            settings.wind = parseInt(e.target.value);
+            ui.displays.wind.textContent = settings.wind;
+        });
+
+        ui.cityLights.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            settings.cityLightChance = val / 100;
+            ui.displays.city.textContent = val + '%';
+            buildings.forEach(b => b.updateLights());
+        });
+
+        ui.btnColorToggle.addEventListener('click', () => {
+            settings.randomColor = !settings.randomColor;
+            
+            if (settings.randomColor) {
+                ui.btnColorToggle.textContent = "Random: ON";
+                ui.btnColorToggle.classList.add('active');
+                ui.colorPicker.disabled = true;
+                ui.colorPicker.style.opacity = '0.5';
+            } else {
+                ui.btnColorToggle.textContent = "Random: OFF";
+                ui.btnColorToggle.classList.remove('active');
+                ui.colorPicker.disabled = false;
+                ui.colorPicker.style.opacity = '1';
+                settings.customColor = ui.colorPicker.value;
+            }
+        });
+
+        ui.colorPicker.addEventListener('input', (e) => {
+            settings.customColor = e.target.value;
+        });
+
+        ui.clearBtn.addEventListener('click', () => {
+            particles = [];
+            rockets = [];
+        });
+
+        let autoLaunchActive = false;
+        ui.autoLaunch.addEventListener('click', () => {
+            autoLaunchActive = !autoLaunchActive;
+            ui.autoLaunch.textContent = autoLaunchActive ? "Auto Fire: ON" : "Auto Fire: OFF";
+            ui.autoLaunch.classList.toggle('active');
+            
+            if(autoLaunchActive) {
+                autoLaunchInterval = setInterval(() => {
+                    const tx = random(width * 0.1, width * 0.9);
+                    const ty = random(height * 0.1, height * 0.5);
+                    rockets.push(new Rocket(tx, ty));
+                }, 1000); 
+            } else {
+                clearInterval(autoLaunchInterval);
+            }
+        });
+
+        ui.toggleBtn.addEventListener('click', () => {
+            ui.sidebar.classList.toggle('collapsed');
+        });
+
+        init();
+
+    </script>
+</body>
+</html>
